@@ -1,0 +1,6 @@
+strategy,model,folds,mean,sd
+Single stratified split (Task 1),XGBoost,1,0.4453096760056771,
+Single stratified split (Task 1),SVM (15k cap),1,0.26765889614912136,
+Stratified 5-fold CV,XGBoost,5,0.4552750708586535,0.010979241591189768
+Grouped 5-fold CV (by seller),XGBoost,5,0.44748275904331736,0.027171577931280808
+"Temporal split (train <2018, test 2018)",XGBoost,1,0.32391584705089127,

@@ -1,0 +1,2 @@
+grouping,demographic_parity_difference,equalized_odds_difference,overall_recall,overall_precision,threshold
+region,0.2721771214127087,0.2611262724815414,0.7001278772378516,0.24118942731277532,0.40008944

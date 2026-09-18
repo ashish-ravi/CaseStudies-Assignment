@@ -1,0 +1,4 @@
+strategy,model,folds,mean,sd
+Single random split (Task 1),XGBoost,1,3.11247399941259,
+5-fold CV,XGBoost,5,3.1214347798538897,0.016158626392672296
+Grouped 5-fold CV (by courier),XGBoost,5,3.118690526904314,0.00999771324652432
