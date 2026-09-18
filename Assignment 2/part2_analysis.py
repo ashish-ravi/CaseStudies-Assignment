@@ -1,13 +1,4 @@
-"""Individual Task 2, Part 2: validation, learning curves and fairness.
-
-Answers the four questions the brief asks about the Task 1 methodology:
-  1. was the evaluation unbiased (cross-validation and sampling),
-  2. how does performance move with training set size (learning curves),
-  3. is there measurable group bias (Fairlearn),
-  4. what breaks at scale (discussed in the report, not here).
-
-Every number in the Task 2 report comes from this script.
-"""
+"""Task 2, Part 2: cross-validation, learning curves, fairness."""
 
 import time
 import warnings
@@ -37,9 +28,7 @@ np.random.seed(RANDOM_STATE)
 OUT = prep.OUTPUT_DIR
 OUT.mkdir(parents=True, exist_ok=True)
 
-# Task 1 capped support vector machine training here on the assumption that
-# the full set was not workable. Task 2 tests that assumption rather than
-# inheriting it.
+# Task 1's SVM training cap.
 TASK1_SVM_CAP = 15_000
 
 
@@ -76,15 +65,12 @@ def make_svm_reg():
         ("reg", SVR(kernel="rbf", C=10.0, gamma="scale", cache_size=1000))])
 
 
-# --------------------------------------------------------------------------
-# 1. Cross-validation and sampling strategies
-# --------------------------------------------------------------------------
+# --- Cross-validation and sampling ---
 
 def olist_validation(X, y, sens):
     rows = []
 
-    # (a) The Task 1 protocol: one stratified 80/20 split, reported as a point
-    # estimate with no spread.
+    # Task 1 protocol: one stratified 80/20 split.
     X_tr, X_te, y_tr, y_te = train_test_split(
         X, y, test_size=0.2, stratify=y, random_state=RANDOM_STATE)
     xgb = make_xgb_clf(y_tr).fit(X_tr, y_tr)
@@ -102,8 +88,7 @@ def olist_validation(X, y, sens):
                      folds=1, mean=single_svm, sd=np.nan))
     log(f"single split SVM PR-AUC {single_svm:.4f}")
 
-    # (b) Stratified 5-fold. Same sampling assumption, but it reports spread,
-    # which is what the single split cannot do.
+    # Stratified 5-fold, which also gives the spread.
     skf = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
     scores = []
     for k, (tr, te) in enumerate(skf.split(X, y)):
@@ -113,8 +98,7 @@ def olist_validation(X, y, sens):
     rows.append(dict(strategy="Stratified 5-fold CV", model="XGBoost", folds=5,
                      mean=np.mean(scores), sd=np.std(scores, ddof=1)))
 
-    # (c) Grouped by seller. Orders from one seller share a processing culture,
-    # so a random split puts the same seller on both sides and flatters the model.
+    # Grouped by seller: a random split puts the same seller on both sides.
     gkf = GroupKFold(n_splits=5)
     scores_g = []
     for k, (tr, te) in enumerate(gkf.split(X, y, groups=sens["seller_id"])):
@@ -124,8 +108,7 @@ def olist_validation(X, y, sens):
     rows.append(dict(strategy="Grouped 5-fold CV (by seller)", model="XGBoost", folds=5,
                      mean=np.mean(scores_g), sd=np.std(scores_g, ddof=1)))
 
-    # (d) Temporal. Task 1 already reported this; repeated here so all four
-    # protocols sit in one table.
+    # Temporal split.
     train_mask = sens["purchase_year"] < 2018
     m = make_xgb_clf(y[train_mask]).fit(X[train_mask], y[train_mask])
     temporal = average_precision_score(y[~train_mask],
@@ -156,8 +139,7 @@ def food_validation(X, y, sens):
     rows.append(dict(strategy="5-fold CV", model="XGBoost", folds=5,
                      mean=np.mean(scores), sd=np.std(scores, ddof=1)))
 
-    # The same courier appears in both halves of a random split, so the model
-    # can memorise individual couriers rather than learn the conditions.
+    # Same courier appears on both sides of a random split.
     gkf = GroupKFold(n_splits=5)
     scores_g = []
     for k, (tr, te) in enumerate(gkf.split(X, y, groups=sens["courier_id"])):
@@ -171,9 +153,7 @@ def food_validation(X, y, sens):
     return X_tr, X_te, y_tr, y_te
 
 
-# --------------------------------------------------------------------------
-# 2. Learning curves
-# --------------------------------------------------------------------------
+# --- Learning curves ---
 
 def olist_learning_curve(X_tr, X_te, y_tr, y_te):
     sizes = [2000, 5000, 10000, 20000, 40000, len(X_tr)]
@@ -223,9 +203,7 @@ def food_learning_curve(X_tr, X_te, y_tr, y_te):
     pd.DataFrame(rows).to_csv(OUT / "learning_curve_food.csv", index=False)
 
 
-# --------------------------------------------------------------------------
-# 3. Fairness
-# --------------------------------------------------------------------------
+# --- Fairness ---
 
 def olist_fairness(X, y, sens):
     X_tr, X_te, y_tr, y_te = train_test_split(
@@ -235,8 +213,7 @@ def olist_fairness(X, y, sens):
     m = make_xgb_clf(y_tr).fit(X_tr, y_tr)
     scores = m.predict_proba(X_te)[:, 1]
 
-    # The 70% recall operating point the Task 1 report quoted. Fairness is
-    # measured at the threshold that would actually be deployed, not at 0.5.
+    # Task 1's 70% recall operating point, not 0.5.
     threshold = np.quantile(scores[y_te == 1], 0.30)
     y_pred = (scores >= threshold).astype(int)
     log(f"olist fairness threshold {threshold:.4f}, overall recall "
@@ -278,8 +255,7 @@ def food_fairness(X, y, sens):
     m = make_xgb_reg().fit(X_tr, y_tr)
     pred = m.predict(X_te)
 
-    # For a regression the harm is not a flag but a systematically wrong promise,
-    # so the group metrics are error size and the direction of the error.
+    # Regression: measure error size and direction by group.
     metrics = {
         "count": lambda yt, yp: len(yt),
         "mae": mean_absolute_error,

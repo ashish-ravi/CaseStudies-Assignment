@@ -1,8 +1,4 @@
-"""Emits the appendix tables straight from the result CSVs.
-
-Generating rather than typing them means the report cannot drift away from what
-the code actually produced.
-"""
+"""Writes the appendix tables from the result CSVs."""
 from pathlib import Path
 
 import pandas as pd

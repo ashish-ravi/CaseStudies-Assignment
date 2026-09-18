@@ -1,10 +1,4 @@
-"""Feature preparation for Individual Task 2, Part 2.
-
-Reproduces the two pipelines from Task 1 exactly, so the reflection in Task 2
-analyses the same models that were reported, not a rebuilt approximation. The
-only addition is that each loader also returns the sensitive attributes needed
-for the fairness analysis, which Task 1 never isolated.
-"""
+"""Task 1 feature pipelines, plus the sensitive attributes used for fairness."""
 
 from pathlib import Path
 
@@ -14,7 +8,7 @@ import pandas as pd
 RANDOM_STATE = 42
 SVM_TRAIN_CAP = 15_000
 
-# Data was downloaded for Task 1 and is not duplicated here.
+# Data lives with Task 1.
 DATA_ROOT = Path(__file__).resolve().parents[2] / "Assignment 1"
 OLIST_DIR = DATA_ROOT / "olist"
 FOOD_DIR = DATA_ROOT / "food_delivery"
@@ -37,7 +31,7 @@ def _top_n(series, n, other="other"):
 
 
 def load_olist():
-    """Returns X, y, and a frame of attributes held out of the model."""
+    """Returns X, y, sensitive."""
     def read(name):
         return pd.read_csv(OLIST_DIR / f"olist_{name}_dataset.csv")
 
@@ -122,8 +116,7 @@ def load_olist():
                                      df["customer_lat"], df["customer_lng"])
     df["is_interstate"] = (df["customer_state"] != df["seller_state"]).astype(int)
 
-    # Kept before the top-n collapse, since the fairness analysis needs the real
-    # state rather than the "other" bucket the model sees.
+    # Keep the real state. The model only sees the collapsed version.
     true_customer_state = df["customer_state"].copy()
 
     df["product_category"] = _top_n(df["product_category"].fillna("unknown"), 15)
@@ -157,9 +150,7 @@ def load_olist():
     return X, y, sensitive
 
 
-# Brazil's five official macro-regions. The North and Northeast carry the
-# country's lowest incomes and thinnest logistics coverage, which is why
-# region is the grouping of interest rather than an arbitrary state split.
+# Brazil's five macro-regions.
 _BR_REGION = {
     "AC": "North", "AP": "North", "AM": "North", "PA": "North", "RO": "North",
     "RR": "North", "TO": "North",
@@ -173,7 +164,7 @@ _BR_REGION = {
 
 
 def load_food():
-    """Returns X, y, and a frame of attributes held out of the fairness question."""
+    """Returns X, y, sensitive."""
     food = pd.read_csv(FOOD_DIR / "train.csv")
     food_clean = food.copy()
     for col in food_clean.select_dtypes(include="object").columns:
@@ -219,8 +210,7 @@ def load_food():
     X = pd.get_dummies(food_clean[numeric + categorical], columns=categorical)
     y = food_clean["time_taken_min"]
 
-    # Age bands follow the age discrimination literature's convention of
-    # treating the youngest and oldest workers as the groups at risk.
+    # Age bands for the fairness groups.
     age = food_clean["Delivery_person_Age"]
     sensitive = pd.DataFrame({
         "city_type": food_clean["City"].fillna("unknown").values,

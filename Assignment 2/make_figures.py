@@ -1,4 +1,4 @@
-"""Figures for the Task 2 report. Style matches the Task 1 figures."""
+"""Report figures."""
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -15,7 +15,7 @@ mpl.rcParams.update({"savefig.dpi": 300, "savefig.bbox": "tight", "font.size": 7
                      "axes.grid": True, "grid.alpha": 0.25})
 BLUE, ORANGE = "#0072B2", "#D55E00"
 
-# ---- Figure 1: learning curves ------------------------------------------
+# --- Learning curves ---
 lc_o = pd.read_csv(OUT / "learning_curve_olist.csv")
 lc_f = pd.read_csv(OUT / "learning_curve_food.csv")
 
@@ -28,7 +28,7 @@ for ax, lc, ylabel, title, cap_note in [
         d = lc[lc["model"] == model]
         ax.plot(d["n_train"], d["score"], marker=marker, markersize=3.2,
                 linewidth=1.2, color=colour, label=model)
-    # The training size Task 1 capped the support vector machines at.
+    # Task 1's SVM cap.
     ax.axvline(cap_note, color="grey", linestyle=":", linewidth=0.9)
     ax.annotate("Task 1 SVM cap", xy=(cap_note, ax.get_ylim()[1]),
                 xytext=(cap_note * 1.15, ax.get_ylim()[1]), fontsize=5.8,
@@ -42,7 +42,7 @@ fig.tight_layout(w_pad=1.4)
 fig.savefig(IMG / "learning_curves.pdf")
 print("wrote learning_curves.pdf")
 
-# ---- Figure 2: fairness by region ---------------------------------------
+# --- Fairness by region ---
 reg = pd.read_csv(OUT / "fairness_olist_region.csv")
 reg = reg.sort_values("false_negative_rate")
 
@@ -52,7 +52,7 @@ ax = axes[0]
 ax.barh(reg["group"], reg["false_negative_rate"], color=BLUE, height=0.62)
 overall_fnr = 1 - pd.read_csv(OUT / "fairness_olist_summary.csv")["overall_recall"].iloc[0]
 ax.axvline(overall_fnr, color="black", linestyle="--", linewidth=0.9)
-# x in data units, y as a fraction of the axes, so the label clears the bars.
+# x in data units, y in axes fraction.
 ax.text(overall_fnr + 0.006, 0.03, f"overall {overall_fnr:.2f}", fontsize=5.8,
         color="black", ha="left", va="bottom", transform=ax.get_xaxis_transform())
 ax.set_xlabel("Missed late deliveries (false negative rate)")
